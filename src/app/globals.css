@@ -1,26 +1,50 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #06070a;
+  --ink: #e8ecef;
+  --dim: #8a94a0;
+  --signal: #6ff2dd;
+  --violet: #8b7dff;
+  --amber: #ffbe6b;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-ink: var(--ink);
+  --color-dim: var(--dim);
+  --color-signal: var(--signal);
+  --color-violet: var(--violet);
+  --color-amber: var(--amber);
+  --font-sans: var(--font-grotesk);
+  --font-mono: var(--font-jetbrains);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--bg);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-grotesk), system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--signal);
+  color: var(--bg);
+}
+
+/* Blinking terminal cursor */
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.cursor-blink {
+  animation: blink 1.1s step-start infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor-blink { animation: none; }
 }
