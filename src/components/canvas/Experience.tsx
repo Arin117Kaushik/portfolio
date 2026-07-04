@@ -2,10 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import * as THREE from "three";
 import Particles from "./Particles";
 import Stations from "./Stations";
+import Effects from "./Effects";
 import { scrollState, sceneForProgress, useUIStore } from "@/lib/store";
 
 const CAM_START = 8;
@@ -82,16 +82,16 @@ export default function Experience() {
         <Rig />
         <Particles />
         <Stations />
-        <EffectComposer>
-          <Bloom
-            intensity={0.5}
-            luminanceThreshold={0.4}
-            luminanceSmoothing={0.5}
-            mipmapBlur
-          />
-          <Vignette eskil={false} offset={0.25} darkness={0.75} />
-        </EffectComposer>
+        <Effects />
       </Canvas>
+      {/* vignette as a DOM overlay — free, and immune to composer issues */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse at center, transparent 52%, rgba(0,0,0,0.5) 100%)",
+        }}
+      />
     </div>
   );
 }

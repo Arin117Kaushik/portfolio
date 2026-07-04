@@ -28,7 +28,7 @@ export default function RootLayout({
       lang="en"
       className={`${grotesk.variable} ${jetbrains.variable} antialiased`}
     >
-      <body>{children}</body>
+      <body className="grain">{children}</body>
     </html>
   );
 }

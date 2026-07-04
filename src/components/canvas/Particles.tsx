@@ -13,6 +13,7 @@ import { scrollState, useUIStore } from "@/lib/store";
 const vertexShader = /* glsl */ `
   uniform float uTime;
   uniform float uProgress;
+  uniform vec2 uPointer; // NDC
   attribute vec4 aSeed;
   attribute float aCat;
   attribute vec4 aGrid; // xyz target, w = isGridParticle
@@ -52,6 +53,15 @@ const vertexShader = /* glsl */ `
     float size = (aSeed.w * 3.0 + 2.0) * (1.0 + chaosAmp * 1.1) * (150.0 / dist);
     gl_PointSize = min(size, 18.0);
     vec4 clip = projectionMatrix * mv;
+
+    // pointer repulsion in screen space — the swarm parts around the cursor
+    // at every stage of the journey, including behind the finale content
+    vec2 pnd = clip.xy / max(0.0001, clip.w);
+    vec2 away = pnd - uPointer;
+    float pd = length(away * vec2(1.0, 0.6));
+    float push = 0.09 * exp(-pd * pd * 22.0);
+    clip.xy += normalize(away + 0.0001) * push * clip.w;
+
     gl_Position = clip;
 
     // colour journey: noise-grey → signal cyan, category hues mid-corridor
@@ -74,7 +84,7 @@ const vertexShader = /* glsl */ `
     // hundred pixels at the vanishing point; zero them there. Near particles
     // are exempt, so the effect reads as a clear flight channel — which also
     // keeps the hero copy legible inside it.
-    vec2 ndc = clip.xy / max(0.0001, clip.w);
+    vec2 ndc = pnd;
     float centerFade = smoothstep(0.14, 0.55, length(ndc * vec2(1.0, 0.8)));
     vAlpha *= mix(1.0, centerFade, smoothstep(12.0, 32.0, dist));
   }
@@ -143,8 +153,11 @@ export default function Particles() {
 
   useFrame((state) => {
     if (!material.current) return;
-    material.current.uniforms.uTime.value = state.clock.elapsedTime;
-    material.current.uniforms.uProgress.value = scrollState.current;
+    const u = material.current.uniforms;
+    u.uTime.value = state.clock.elapsedTime;
+    u.uProgress.value = scrollState.current;
+    // ease the pointer so the swarm feels like it has mass
+    u.uPointer.value.lerp(state.pointer, 0.08);
   });
 
   return (
@@ -162,6 +175,7 @@ export default function Particles() {
         uniforms={{
           uTime: { value: 0 },
           uProgress: { value: 0 },
+          uPointer: { value: new THREE.Vector2(0, 0) },
         }}
         transparent
         depthWrite={false}

@@ -8,6 +8,7 @@ import {
   stats,
   workCluster,
 } from "@/lib/content";
+import { CountUp, Magnetic, Scramble, TiltCard } from "./interactive";
 
 // The Order scene. Normal document flow — scrolls up over the fixed canvas
 // once the corridor journey completes, constellation wall glowing behind.
@@ -19,15 +20,20 @@ export default function Finale() {
         <div className="font-mono text-[10px] tracking-[0.3em] text-signal/80 uppercase">
           SCN 04 // order
         </div>
-        <h2 className="mt-4 text-4xl font-medium sm:text-6xl">
-          chaos, processed.
-        </h2>
+        <Scramble
+          as="h2"
+          text="chaos, processed."
+          className="mt-4 block text-4xl font-medium sm:text-6xl"
+        />
 
         {/* stats */}
         <div className="mt-14 grid grid-cols-2 gap-px bg-white/10 sm:grid-cols-4">
           {stats.map((s) => (
             <div key={s.caption} className="bg-bg p-6">
-              <div className="text-3xl font-medium text-signal">{s.value}</div>
+              <CountUp
+                value={s.value}
+                className="text-3xl font-medium text-signal"
+              />
               <div className="mt-2 text-xs leading-relaxed text-dim">
                 {s.caption}
               </div>
@@ -42,7 +48,7 @@ export default function Finale() {
           </h3>
           <div className="mt-6 grid gap-px bg-white/10 sm:grid-cols-2 lg:grid-cols-3">
             {workCluster.map((w) => (
-              <div
+              <TiltCard
                 key={w.name}
                 className="group bg-bg p-6 transition-colors hover:bg-white/[0.03]"
               >
@@ -51,7 +57,7 @@ export default function Finale() {
                 <div className="mt-4 font-mono text-[10px] text-dim/60">
                   {w.stack}
                 </div>
-              </div>
+              </TiltCard>
             ))}
           </div>
         </div>
@@ -81,10 +87,10 @@ export default function Finale() {
           </a>
           <div className="mt-px grid gap-px bg-white/10 sm:grid-cols-2 lg:grid-cols-3">
             {personalCluster.rest.map((p) => (
-              <div key={p.name} className="bg-bg p-5">
+              <TiltCard key={p.name} className="bg-bg p-5">
                 <div className="font-mono text-sm">{p.name}</div>
                 <p className="mt-1 text-xs text-dim">{p.line}</p>
-              </div>
+              </TiltCard>
             ))}
           </div>
         </div>
@@ -107,28 +113,34 @@ export default function Finale() {
             {">"} open to data · automation · ai roles
           </p>
           <div className="mt-6 flex flex-wrap gap-4">
-            <a
-              href={`mailto:${identity.email}`}
-              className="border border-signal bg-signal px-6 py-3 font-mono text-xs tracking-wider text-bg transition-opacity hover:opacity-85"
-            >
-              say hello
-            </a>
-            <a
-              href={identity.github}
-              target="_blank"
-              rel="noreferrer"
-              className="border border-white/20 px-6 py-3 font-mono text-xs tracking-wider transition-colors hover:border-signal hover:text-signal"
-            >
-              github
-            </a>
-            <a
-              href={identity.linkedin}
-              target="_blank"
-              rel="noreferrer"
-              className="border border-white/20 px-6 py-3 font-mono text-xs tracking-wider transition-colors hover:border-signal hover:text-signal"
-            >
-              linkedin
-            </a>
+            <Magnetic>
+              <a
+                href={`mailto:${identity.email}`}
+                className="inline-block border border-signal bg-signal px-6 py-3 font-mono text-xs tracking-wider text-bg transition-opacity hover:opacity-85"
+              >
+                say hello
+              </a>
+            </Magnetic>
+            <Magnetic>
+              <a
+                href={identity.github}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-block border border-white/20 px-6 py-3 font-mono text-xs tracking-wider transition-colors hover:border-signal hover:text-signal"
+              >
+                github
+              </a>
+            </Magnetic>
+            <Magnetic>
+              <a
+                href={identity.linkedin}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-block border border-white/20 px-6 py-3 font-mono text-xs tracking-wider transition-colors hover:border-signal hover:text-signal"
+              >
+                linkedin
+              </a>
+            </Magnetic>
           </div>
           <p className="mt-16 font-mono text-[10px] leading-relaxed text-dim/50">
             {footerLine}
