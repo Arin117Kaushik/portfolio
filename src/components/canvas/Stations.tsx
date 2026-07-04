@@ -1,15 +1,44 @@
 "use client";
 
-import { useRef } from "react";
+import { RefObject, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
 // Three machines along the corridor. Kept deliberately spare — emissive
 // geometry + bloom does the work; the particles are the protagonist.
 
+// Planet-approach reveal: a station is invisible from afar and materializes
+// as the camera closes in. Perspective supplies the growth; we supply the fade.
+const FADE_FAR = 55;
+const FADE_NEAR = 22;
+
+function useProximityFade(ref: RefObject<THREE.Group | null>, stationZ: number) {
+  useFrame(({ camera }) => {
+    const g = ref.current;
+    if (!g) return;
+    const d = Math.abs(camera.position.z - stationZ);
+    const t = THREE.MathUtils.clamp((FADE_FAR - d) / (FADE_FAR - FADE_NEAR), 0, 1);
+    const fade = t * t * (3 - 2 * t);
+    g.visible = fade > 0.003;
+    if (!g.visible) return;
+    g.traverse((o) => {
+      const mat = (o as THREE.Mesh).material as
+        | (THREE.Material & { opacity: number })
+        | undefined;
+      if (mat && mat.transparent) {
+        if (o.userData.baseOpacity === undefined) o.userData.baseOpacity = mat.opacity;
+        mat.opacity = o.userData.baseOpacity * fade;
+      }
+    });
+  });
+}
+
 function VahanGate() {
+  const root = useRef<THREE.Group>(null);
   const outer = useRef<THREE.Mesh>(null);
   const inner = useRef<THREE.Mesh>(null);
+
+  useProximityFade(root, -50);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
@@ -22,7 +51,7 @@ function VahanGate() {
   });
 
   return (
-    <group position={[0, 0, -50]}>
+    <group ref={root} position={[0, 0, -50]}>
       <mesh ref={outer}>
         <torusGeometry args={[6.2, 0.07, 16, 96]} />
         <meshBasicMaterial color="#6ff2dd" transparent opacity={0.9} />
@@ -45,9 +74,11 @@ function VahanGate() {
 function TaxonomyLattice() {
   const g = useRef<THREE.Group>(null);
 
+  useProximityFade(g, -110);
+
   useFrame((state) => {
     const t = state.clock.elapsedTime;
-    if (g.current) {
+    if (g.current && g.current.visible) {
       g.current.rotation.y = t * 0.12;
       g.current.rotation.x = Math.sin(t * 0.2) * 0.15;
     }
@@ -72,8 +103,11 @@ function TaxonomyLattice() {
 function SignalChannels() {
   const g = useRef<THREE.Group>(null);
 
+  useProximityFade(g, -170);
+
   useFrame((state) => {
-    if (g.current) g.current.rotation.z = Math.sin(state.clock.elapsedTime * 0.3) * 0.08;
+    if (g.current && g.current.visible)
+      g.current.rotation.z = Math.sin(state.clock.elapsedTime * 0.3) * 0.08;
   });
 
   const lanes = [-3, -1.5, 0, 1.5, 3];
