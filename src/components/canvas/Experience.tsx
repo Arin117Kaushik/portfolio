@@ -6,7 +6,12 @@ import * as THREE from "three";
 import Particles from "./Particles";
 import Stations from "./Stations";
 import Effects from "./Effects";
-import { scrollState, sceneForProgress, useUIStore } from "@/lib/store";
+import {
+  pointerState,
+  scrollState,
+  sceneForProgress,
+  useUIStore,
+} from "@/lib/store";
 
 const CAM_START = 8;
 const CAM_END = -218;
@@ -21,15 +26,24 @@ function Rig() {
     const onMove = (e: MouseEvent) => {
       mouse.current.x = (e.clientX / window.innerWidth - 0.5) * 2;
       mouse.current.y = (e.clientY / window.innerHeight - 0.5) * 2;
+      // NDC for the particle shader — window-level, so it keeps working
+      // when the finale DOM sits between cursor and canvas
+      pointerState.x = mouse.current.x;
+      pointerState.y = -mouse.current.y;
     };
     window.addEventListener("mousemove", onMove);
     return () => window.removeEventListener("mousemove", onMove);
   }, []);
 
   useFrame((_, delta) => {
+    // clamp delta: rAF freezes entirely in hidden windows, and the first
+    // frame back would otherwise arrive with a multi-second dt and teleport
+    // every damped value
+    const dt = Math.min(delta, 0.1);
     // damp scroll once per frame — single writer for scrollState.current
-    const k = 1 - Math.exp(-4.5 * delta);
+    const k = 1 - Math.exp(-4.5 * dt);
     scrollState.current += (scrollState.target - scrollState.current) * k;
+    scrollState.ambient += (scrollState.post - scrollState.ambient) * k;
 
     const p = scrollState.current;
     const z = CAM_START + (CAM_END - CAM_START) * p;

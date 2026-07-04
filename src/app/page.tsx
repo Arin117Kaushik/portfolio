@@ -31,6 +31,11 @@ export default function Home() {
       if (!driver.current) return;
       const max = driver.current.offsetHeight - window.innerHeight;
       scrollState.target = Math.min(1, Math.max(0, window.scrollY / max));
+      // past the corridor: how far the finale has risen into view
+      scrollState.post = Math.min(
+        1,
+        Math.max(0, (window.scrollY - max) / (window.innerHeight * 1.2))
+      );
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });

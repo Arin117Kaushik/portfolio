@@ -3,7 +3,7 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { scrollState, useUIStore } from "@/lib/store";
+import { pointerState, scrollState, useUIStore } from "@/lib/store";
 
 // One shader carries the whole chaos→order journey. Order is spatial:
 // particles deeper in the corridor (-z) are progressively more ordered,
@@ -11,7 +11,9 @@ import { scrollState, useUIStore } from "@/lib/store";
 // constellation wall at the end of the scroll.
 
 const vertexShader = /* glsl */ `
-  uniform float uTime;
+  uniform float uTime;   // warped: slows to ~0.12x as the field goes ambient
+  uniform float uRTime;  // real elapsed time — twinkle keeps its pace
+  uniform float uAmbient; // 0 corridor journey → 1 settled behind finale
   uniform float uProgress;
   uniform vec2 uPointer; // NDC
   attribute vec4 aSeed;
@@ -46,6 +48,12 @@ const vertexShader = /* glsl */ `
     if (aGrid.w > 0.5) {
       float t = smoothstep(0.76 + aSeed.y * 0.1, 0.9 + aSeed.z * 0.08, uProgress);
       pos = mix(pos, aGrid.xyz, t);
+      // ambient breathing — the settled wall drifts gently instead of
+      // freezing into a static bitmap behind the finale
+      pos.xy += vec2(
+        sin(uRTime * 0.45 + aSeed.x * 39.0),
+        cos(uRTime * 0.38 + aSeed.y * 47.0)
+      ) * 0.05 * uAmbient * t;
     }
 
     vec4 mv = modelViewMatrix * vec4(pos, 1.0);
@@ -59,7 +67,9 @@ const vertexShader = /* glsl */ `
     vec2 pnd = clip.xy / max(0.0001, clip.w);
     vec2 away = pnd - uPointer;
     float pd = length(away * vec2(1.0, 0.6));
-    float push = 0.09 * exp(-pd * pd * 22.0);
+    // ambient state: stronger, wider repulsion — the field visibly parts
+    // around the cursor while you read the finale
+    float push = (0.09 + 0.06 * uAmbient) * exp(-pd * pd * (22.0 - 9.0 * uAmbient));
     clip.xy += normalize(away + 0.0001) * push * clip.w;
 
     gl_Position = clip;
@@ -87,6 +97,11 @@ const vertexShader = /* glsl */ `
     vec2 ndc = pnd;
     float centerFade = smoothstep(0.14, 0.55, length(ndc * vec2(1.0, 0.8)));
     vAlpha *= mix(1.0, centerFade, smoothstep(12.0, 32.0, dist));
+
+    // settled state: dim for legibility but twinkle on real time —
+    // alive at reading brightness, never dead
+    float twinkle = 0.72 + 0.28 * sin(uRTime * (1.2 + aSeed.z * 2.4) + aSeed.w * 40.0);
+    vAlpha *= mix(1.0, 0.45 * twinkle, uAmbient);
   }
 `;
 
@@ -111,6 +126,8 @@ export default function Particles() {
   const quality = useUIStore((s) => s.quality);
   const count = quality === "high" ? 30000 : 10000;
   const material = useRef<THREE.ShaderMaterial>(null);
+  const warpedTime = useRef(0);
+  const pointerTarget = useRef(new THREE.Vector2(0, 0));
 
   const { positions, seeds, cats, grids } = useMemo(() => {
     const positions = new Float32Array(count * 3);
@@ -151,13 +168,21 @@ export default function Particles() {
     return { positions, seeds, cats, grids };
   }, [count]);
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     if (!material.current) return;
     const u = material.current.uniforms;
-    u.uTime.value = state.clock.elapsedTime;
+    const dt = Math.min(delta, 0.1); // hidden-window rAF freeze guard
+    const ambient = scrollState.ambient;
+    // flow time slows to ~0.12x as the field settles behind the finale
+    warpedTime.current += dt * (1 - 0.88 * ambient);
+    u.uTime.value = warpedTime.current;
+    u.uRTime.value = state.clock.elapsedTime;
+    u.uAmbient.value = ambient;
     u.uProgress.value = scrollState.current;
-    // ease the pointer so the swarm feels like it has mass
-    u.uPointer.value.lerp(state.pointer, 0.08);
+    // window-level pointer (canvas events die under the finale DOM);
+    // eased so the swarm feels like it has mass
+    pointerTarget.current.set(pointerState.x, pointerState.y);
+    u.uPointer.value.lerp(pointerTarget.current, 0.08);
   });
 
   return (
@@ -174,6 +199,8 @@ export default function Particles() {
         fragmentShader={fragmentShader}
         uniforms={{
           uTime: { value: 0 },
+          uRTime: { value: 0 },
+          uAmbient: { value: 0 },
           uProgress: { value: 0 },
           uPointer: { value: new THREE.Vector2(0, 0) },
         }}

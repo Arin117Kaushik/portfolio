@@ -15,7 +15,7 @@ import { CountUp, Magnetic, Scramble, TiltCard } from "./interactive";
 
 export default function Finale() {
   return (
-    <section className="relative z-10 bg-gradient-to-b from-transparent via-[#06070ae6] to-bg">
+    <section className="relative z-10 bg-gradient-to-b from-transparent via-[#06070ab3] to-[#06070ae0]">
       <div className="mx-auto max-w-5xl px-6 pt-[38vh] pb-24">
         <div className="font-mono text-[10px] tracking-[0.3em] text-signal/80 uppercase">
           SCN 04 // order
