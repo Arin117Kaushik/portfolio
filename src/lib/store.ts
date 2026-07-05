@@ -54,12 +54,13 @@ interface UIState {
   // SAVE FILE rebuild: nothing scrolls until the player presses START.
   // The boot gate is also the sound-unlock gesture.
   booted: boolean;
-  // "hub" = level select; a WorldId = inside that world
-  world: WorldId | "hub";
+  // "hub" = level select; a WorldId = inside that world;
+  // "camp" = the exit scene — fireside terminal, contact
+  world: WorldId | "hub" | "camp";
   setScene: (s: number) => void;
   setQuality: (q: "high" | "low") => void;
   setBooted: (b: boolean) => void;
-  setWorld: (w: WorldId | "hub") => void;
+  setWorld: (w: WorldId | "hub" | "camp") => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -73,7 +74,10 @@ export const useUIStore = create<UIState>((set) => ({
   setWorld: (world) => {
     set({ world });
     worldState.target = world === "hub" ? 0 : 1;
-    if (world !== "hub") {
+    if (world === "camp") {
+      // ember warmth — the fire's tint on the particle field
+      [worldState.r, worldState.g, worldState.b] = [0.91, 0.54, 0.29];
+    } else if (world !== "hub") {
       [worldState.r, worldState.g, worldState.b] = worldById(world).rgb;
     }
   },

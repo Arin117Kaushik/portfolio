@@ -8,6 +8,34 @@
 
 const MASTER_LEVEL = 0.5;
 
+// Per-world drone character — same graph, different weather. Frequencies
+// keep the slightly-off-octave beating; `bType` recolors the upper voice.
+interface WorldPatch {
+  a: number; // low oscillator
+  b: number; // upper oscillator (detuned from the octave)
+  bType: OscillatorType;
+  filter: number; // lowpass base
+  level: number; // drone gain
+  windBase: number; // bandpass centre for the scroll wind
+}
+
+const PATCHES: Record<string, WorldPatch> = {
+  hub: { a: 55, b: 110.7, bType: "triangle", filter: 240, level: 0.07, windBase: 400 },
+  frontier: { a: 49, b: 98.6, bType: "triangle", filter: 205, level: 0.085, windBase: 540 },
+  neon: { a: 58.27, b: 117.3, bType: "sawtooth", filter: 300, level: 0.05, windBase: 760 },
+  depths: { a: 65.41, b: 98.2, bType: "sine", filter: 150, level: 0.06, windBase: 250 },
+  voxel: { a: 82.41, b: 165.6, bType: "triangle", filter: 430, level: 0.055, windBase: 480 },
+  camp: { a: 49, b: 73.7, bType: "sine", filter: 180, level: 0.065, windBase: 300 },
+};
+
+// Beat chimes per world — each world sings its own triad.
+export const WORLD_CHIMES: Record<string, [number, number, number]> = {
+  frontier: [220, 261.63, 329.63], // warm, low — A3 C4 E4
+  neon: [440, 554.37, 659.25], // bright — A4 C#5 E5
+  depths: [329.63, 392, 493.88], // hollow — E4 G4 B4
+  voxel: [523.25, 659.25, 783.99], // cozy major — C5 E5 G5
+};
+
 class AudioEngine {
   enabled = false;
 
@@ -17,6 +45,9 @@ class AudioEngine {
   private droneFilter: BiquadFilterNode | null = null;
   private windGain: GainNode | null = null;
   private windFilter: BiquadFilterNode | null = null;
+  private oscA: OscillatorNode | null = null;
+  private oscB: OscillatorNode | null = null;
+  private patch: WorldPatch = PATCHES.hub;
 
   private ensure() {
     if (this.ctx) return;
@@ -41,10 +72,10 @@ class AudioEngine {
 
     const oscA = ctx.createOscillator();
     oscA.type = "sine";
-    oscA.frequency.value = 55;
+    oscA.frequency.value = this.patch.a;
     const oscB = ctx.createOscillator();
-    oscB.type = "triangle";
-    oscB.frequency.value = 110.7; // slightly off the octave — slow beating
+    oscB.type = this.patch.bType;
+    oscB.frequency.value = this.patch.b; // off the octave — slow beating
     const oscBGain = ctx.createGain();
     oscBGain.gain.value = 0.35;
     oscA.connect(this.droneFilter);
@@ -52,6 +83,8 @@ class AudioEngine {
     oscBGain.connect(this.droneFilter);
     oscA.start();
     oscB.start();
+    this.oscA = oscA;
+    this.oscB = oscB;
 
     const lfo = ctx.createOscillator();
     lfo.frequency.value = 0.07;
@@ -101,17 +134,75 @@ class AudioEngine {
     return this.enabled;
   }
 
+  // Slide the running drone into a world's patch — no restart, the
+  // weather just changes over a couple of seconds.
+  setPatch(id: string) {
+    this.patch = PATCHES[id] ?? PATCHES.hub;
+    if (!this.ctx || !this.oscA || !this.oscB) return;
+    const t = this.ctx.currentTime;
+    this.oscA.frequency.setTargetAtTime(this.patch.a, t, 1.2);
+    this.oscB.frequency.setTargetAtTime(this.patch.b, t, 1.2);
+    this.oscB.type = this.patch.bType;
+  }
+
   // Continuous control, called once per rAF by the director.
   frame(velocity: number, ambient: number) {
     if (!this.enabled || !this.ctx) return;
     const t = this.ctx.currentTime;
     const v = Math.min(1, Math.abs(velocity) * 6);
+    const p = this.patch;
     // wind swells and brightens with scroll speed, dies in the finale
     this.windGain!.gain.setTargetAtTime(v * 0.1 * (1 - ambient), t, 0.12);
-    this.windFilter!.frequency.setTargetAtTime(400 + v * 900, t, 0.2);
+    this.windFilter!.frequency.setTargetAtTime(p.windBase + v * 900, t, 0.2);
     // the drone calms and darkens once the field settles
-    this.droneGain!.gain.setTargetAtTime(0.07 - 0.03 * ambient, t, 0.6);
-    this.droneFilter!.frequency.setTargetAtTime(240 - 110 * ambient, t, 0.8);
+    this.droneGain!.gain.setTargetAtTime(p.level - 0.03 * ambient, t, 0.6);
+    this.droneFilter!.frequency.setTargetAtTime(
+      p.filter - p.filter * 0.45 * ambient,
+      t,
+      0.8
+    );
+  }
+
+  // Cave drip — a tiny pitch-fall, echoing in nothing.
+  drip() {
+    if (!this.enabled || !this.ctx) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(1300 + Math.random() * 500, t);
+    osc.frequency.exponentialRampToValueAtTime(340, t + 0.22);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.028, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    osc.connect(g);
+    g.connect(this.master!);
+    osc.start(t);
+    osc.stop(t + 0.32);
+  }
+
+  // Fire crackle — a filtered noise pop.
+  crackle() {
+    if (!this.enabled || !this.ctx) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    const len = Math.floor(ctx.sampleRate * 0.05);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++)
+      data[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 1400 + Math.random() * 1800;
+    filter.Q.value = 1.2;
+    const g = ctx.createGain();
+    g.gain.value = 0.05 + Math.random() * 0.05;
+    src.connect(filter);
+    filter.connect(g);
+    g.connect(this.master!);
+    src.start(t);
   }
 
   // Soft two-partial bell — one per station, pitched to its hue.

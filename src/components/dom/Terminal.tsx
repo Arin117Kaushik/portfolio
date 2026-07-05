@@ -38,9 +38,15 @@ export default function Terminal() {
           { text: "  github          view the source" },
           { text: "  linkedin        the formal profile" },
           { text: "  whoami          who built this" },
+          { text: "  ls artifacts    the full project index" },
           { text: "  stack           what this site runs on" },
           { text: "  clear           clean the buffer" },
         ];
+      case "ls":
+      case "ls artifacts":
+      case "artifacts":
+        window.dispatchEvent(new Event("artifacts-open"));
+        return [{ text: "mounting the full index..." }];
       case "hire-me":
       case "hire me":
         return [{ text: "permission denied — try `sudo hire-me`" }];

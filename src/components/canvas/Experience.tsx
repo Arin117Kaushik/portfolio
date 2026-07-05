@@ -11,6 +11,7 @@ import Frontier from "./Frontier";
 import NeonCity from "./NeonCity";
 import Depths from "./Depths";
 import Voxel from "./Voxel";
+import Camp from "./Camp";
 import Effects from "./Effects";
 
 // legacy corridor set pieces — parked during the SAVE FILE rebuild
@@ -187,6 +188,7 @@ export default function Experience() {
         {world === "neon" && <NeonCity />}
         {world === "depths" && <Depths />}
         {world === "voxel" && <Voxel />}
+        {world === "camp" && <Camp />}
         <Effects />
       </Canvas>
       {/* vignette as a DOM overlay — free, and immune to composer issues */}

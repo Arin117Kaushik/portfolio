@@ -50,7 +50,9 @@ export default function HUD() {
         <div className="text-signal/80">
           {world === "hub"
             ? "WORLDS // 04"
-            : `WORLD ${worldById(world).index} // ${worldById(world).name}`}
+            : world === "camp"
+              ? "CAMP // FIRESIDE"
+              : `WORLD ${worldById(world).index} // ${worldById(world).name}`}
         </div>
         <div className="mt-1 text-dim/60">save file // loaded</div>
       </div>

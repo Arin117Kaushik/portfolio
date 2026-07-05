@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { scrollState, useUIStore, windowAlpha, worldState } from "@/lib/store";
 import { worldById, type WorldId } from "@/lib/worlds";
+import {
+  identity,
+  personalCluster,
+  skills,
+  stations,
+  workCluster,
+} from "@/lib/content";
+import Terminal from "./Terminal";
 
 // DOM layer for the SAVE FILE structure. Hub whisper, per-world journey
 // captions (fixed slot, ≤12 words, swap in place), and under-construction
@@ -210,6 +218,192 @@ function JourneyDom({ cfg }: { cfg: JourneyConfig }) {
   );
 }
 
+const EMBER = "#e8894a";
+
+// THE CAMP — the only place on the site where density is allowed, and
+// even here it's opt-in: the terminal, and `ls artifacts` for the index.
+function CampDom() {
+  const setWorld = useUIStore((s) => s.setWorld);
+  const wrap = useRef<HTMLDivElement>(null);
+  const [indexOpen, setIndexOpen] = useState(false);
+
+  // fade in once the dive settles, same contract as the journeys
+  useEffect(() => {
+    let raf: number;
+    const loop = () => {
+      if (wrap.current) {
+        const a = Math.max(0, (worldState.t - 0.55) / 0.45);
+        wrap.current.style.opacity = String(a);
+        wrap.current.style.pointerEvents = a > 0.6 ? "auto" : "none";
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  useEffect(() => {
+    const open = () => setIndexOpen(true);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIndexOpen(false);
+    };
+    window.addEventListener("artifacts-open", open);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("artifacts-open", open);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, []);
+
+  return (
+    <>
+      <div
+        ref={wrap}
+        className="fixed inset-0 z-10 font-mono"
+        style={{ opacity: 0, pointerEvents: "none" }}
+      >
+        <div className="absolute right-6 top-1/2 w-full max-w-md -translate-y-1/2 px-2 sm:right-16">
+          <div
+            className="text-[10px] tracking-[0.35em]"
+            style={{ color: EMBER }}
+          >
+            THE CAMP
+          </div>
+          <div className="mt-3 text-sm text-dim">
+            &gt; want the full story? say hello.
+          </div>
+          <div className="mt-4">
+            <Terminal />
+          </div>
+          <div className="mt-4 flex items-center gap-6 text-[10px] tracking-[0.2em]">
+            <a
+              href={`mailto:${identity.email}`}
+              className="text-dim transition-colors hover:text-signal"
+            >
+              MAIL
+            </a>
+            <a
+              href={identity.github}
+              target="_blank"
+              rel="noreferrer"
+              className="text-dim transition-colors hover:text-signal"
+            >
+              GITHUB
+            </a>
+            <a
+              href={identity.linkedin}
+              target="_blank"
+              rel="noreferrer"
+              className="text-dim transition-colors hover:text-signal"
+            >
+              LINKEDIN
+            </a>
+            <button
+              onClick={() => setWorld("hub")}
+              className="ml-auto cursor-pointer transition-colors hover:text-signal"
+              style={{ color: EMBER }}
+            >
+              ← WORLDS
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* full index — everything, for whoever asks for everything */}
+      {indexOpen && (
+        <div className="fixed inset-0 z-30 overflow-y-auto bg-black/90 font-mono backdrop-blur-sm">
+          <div className="mx-auto max-w-3xl px-6 py-16">
+            <div className="flex items-baseline justify-between">
+              <div
+                className="text-xs tracking-[0.35em]"
+                style={{ color: EMBER }}
+              >
+                ARTIFACTS // FULL INDEX
+              </div>
+              <button
+                onClick={() => setIndexOpen(false)}
+                className="cursor-pointer text-[10px] tracking-[0.2em] text-dim transition-colors hover:text-signal"
+              >
+                [ ESC ] CLOSE
+              </button>
+            </div>
+
+            <div className="mt-10 text-[10px] tracking-[0.3em] text-dim/60">
+              FLAGSHIPS
+            </div>
+            {stations.map((s) => (
+              <div key={s.id} className="mt-6 border-l pl-4" style={{ borderColor: `${EMBER}44` }}>
+                <div className="text-sm text-ink">{s.title}</div>
+                <div className="mt-1 text-xs leading-relaxed text-dim">
+                  {s.line}
+                </div>
+                <div className="mt-2 text-[10px] text-dim/60">
+                  {s.stack} · <span style={{ color: EMBER }}>{s.metric}</span>{" "}
+                  {s.metricCaption}
+                </div>
+              </div>
+            ))}
+
+            <div className="mt-12 text-[10px] tracking-[0.3em] text-dim/60">
+              WORKSHOP
+            </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {workCluster.map((w) => (
+                <div key={w.name}>
+                  <div className="text-xs text-ink">{w.name}</div>
+                  <div className="mt-1 text-[11px] leading-relaxed text-dim">
+                    {w.line}
+                  </div>
+                  <div className="mt-1 text-[10px] text-dim/50">{w.stack}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-12 text-[10px] tracking-[0.3em] text-dim/60">
+              PERSONAL
+            </div>
+            <div className="mt-4">
+              <a
+                href={personalCluster.featured.href}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-ink underline decoration-dotted underline-offset-4 hover:text-signal"
+              >
+                {personalCluster.featured.name}
+              </a>
+              <div className="mt-1 text-[11px] leading-relaxed text-dim">
+                {personalCluster.featured.line}
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {personalCluster.rest.map((p) => (
+                <div key={p.name} className="text-[11px] text-dim">
+                  <span className="text-ink">{p.name}</span> — {p.line}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-12 text-[10px] tracking-[0.3em] text-dim/60">
+              SKILLS
+            </div>
+            <div className="mt-4 space-y-2">
+              {skills.map((s) => (
+                <div key={s.group} className="text-[11px] text-dim">
+                  <span style={{ color: EMBER }}>{s.group}</span> · {s.items}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-16 text-center text-[10px] tracking-[0.2em] text-dim/40">
+              &gt; the short version was the ride. this is the rest.
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function Worlds() {
   const booted = useUIStore((s) => s.booted);
   const world = useUIStore((s) => s.world);
@@ -219,14 +413,26 @@ export default function Worlds() {
 
   if (world === "hub") {
     return (
-      <div className="pointer-events-none fixed inset-x-0 top-14 z-10 text-center font-mono">
-        <div className="text-xs tracking-[0.45em] text-ink">SELECT WORLD</div>
-        <div className="mt-2 text-[10px] tracking-[0.2em] text-dim/60">
-          four worlds shaped how i build
+      <>
+        <div className="pointer-events-none fixed inset-x-0 top-14 z-10 text-center font-mono">
+          <div className="text-xs tracking-[0.45em] text-ink">SELECT WORLD</div>
+          <div className="mt-2 text-[10px] tracking-[0.2em] text-dim/60">
+            four worlds shaped how i build
+          </div>
         </div>
-      </div>
+        {/* the exit is always visible from the hub — the fire's lit */}
+        <button
+          onClick={() => setWorld("camp")}
+          className="pointer-events-auto fixed bottom-14 left-1/2 z-10 -translate-x-1/2 cursor-pointer border px-5 py-2.5 font-mono text-[10px] tracking-[0.3em] transition-all hover:scale-105"
+          style={{ borderColor: "#e8894a55", color: "#e8894a" }}
+        >
+          ▲ CAMP // SAY HELLO
+        </button>
+      </>
     );
   }
+
+  if (world === "camp") return <CampDom />;
 
   const journey = JOURNEYS[world];
   if (journey) return <JourneyDom cfg={journey} />;
