@@ -26,6 +26,11 @@ export default function Home() {
     // browser scroll restoration racing us after dev reloads
     history.scrollRestoration = "manual";
     window.scrollTo(0, 0);
+    // restoration can still fire after mount on a hard reload; catch it
+    // two frames later, after the browser has had its say
+    const rafId = requestAnimationFrame(() =>
+      requestAnimationFrame(() => window.scrollTo(0, 0))
+    );
 
     const onScroll = () => {
       if (!driver.current) return;
@@ -39,7 +44,10 @@ export default function Home() {
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("scroll", onScroll);
+    };
   }, []);
 
   return (

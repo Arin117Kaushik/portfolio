@@ -9,6 +9,9 @@ import * as THREE from "three";
 
 // Planet-approach reveal: a station is invisible from afar and materializes
 // as the camera closes in. Perspective supplies the growth; we supply the fade.
+// Station z = camera z at the END of its panel window (camZ = 8 - 226p), so
+// the whole window is an approach and the punch-through lands as the panel
+// finishes fading — never mid-read.
 const FADE_FAR = 55;
 const FADE_NEAR = 22;
 
@@ -38,7 +41,7 @@ function VahanGate() {
   const outer = useRef<THREE.Mesh>(null);
   const inner = useRef<THREE.Mesh>(null);
 
-  useProximityFade(root, -50);
+  useProximityFade(root, -68);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
@@ -51,7 +54,7 @@ function VahanGate() {
   });
 
   return (
-    <group ref={root} position={[0, 0, -50]}>
+    <group ref={root} position={[0, 0, -68]}>
       <mesh ref={outer}>
         <torusGeometry args={[6.2, 0.07, 16, 96]} />
         <meshBasicMaterial color="#6ff2dd" transparent opacity={0.9} />
@@ -74,7 +77,7 @@ function VahanGate() {
 function TaxonomyLattice() {
   const g = useRef<THREE.Group>(null);
 
-  useProximityFade(g, -110);
+  useProximityFade(g, -118);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
@@ -85,7 +88,7 @@ function TaxonomyLattice() {
   });
 
   return (
-    <group ref={g} position={[0, 0, -110]}>
+    <group ref={g} position={[0, 0, -118]}>
       {[10, 7, 4].map((s, i) => (
         <lineSegments key={i}>
           <edgesGeometry args={[new THREE.BoxGeometry(s, s, s)]} />
@@ -112,10 +115,12 @@ function SignalChannels() {
 
   const lanes = [-3, -1.5, 0, 1.5, 3];
 
+  // z-rotate: a cylinder's axis is Y, so PI/2 about Z lays it along X.
+  // (Rotating about Y left all five overlapping as one vertical line.)
   return (
     <group ref={g} position={[0, 0, -170]}>
       {lanes.map((y, i) => (
-        <mesh key={i} position={[0, y, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <mesh key={i} position={[0, y, 0]} rotation={[0, 0, Math.PI / 2]}>
           <cylinderGeometry args={[0.03, 0.03, 40, 8]} />
           <meshBasicMaterial
             color={i === 2 ? "#ffbe6b" : "#c9955a"}
