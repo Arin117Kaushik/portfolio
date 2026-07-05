@@ -38,15 +38,21 @@ if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
 interface UIState {
   scene: number;
   quality: "high" | "low";
+  // SAVE FILE rebuild: nothing scrolls until the player presses START.
+  // The boot gate is also the sound-unlock gesture.
+  booted: boolean;
   setScene: (s: number) => void;
   setQuality: (q: "high" | "low") => void;
+  setBooted: (b: boolean) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
   scene: 0,
   quality: "high",
+  booted: false,
   setScene: (scene) => set({ scene }),
   setQuality: (quality) => set({ quality }),
+  setBooted: (booted) => set({ booted }),
 }));
 
 // Scene boundaries in scroll progress.

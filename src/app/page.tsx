@@ -7,7 +7,8 @@ import Panels from "@/components/dom/Panels";
 import Finale from "@/components/dom/Finale";
 import SoundDirector from "@/components/dom/SoundDirector";
 import Cursor from "@/components/dom/Cursor";
-import { scrollState } from "@/lib/store";
+import Boot from "@/components/dom/Boot";
+import { scrollState, useUIStore } from "@/lib/store";
 
 const Experience = dynamic(() => import("@/components/canvas/Experience"), {
   ssr: false,
@@ -22,6 +23,13 @@ const Experience = dynamic(() => import("@/components/canvas/Experience"), {
 
 export default function Home() {
   const driver = useRef<HTMLDivElement>(null);
+  const booted = useUIStore((s) => s.booted);
+
+  // the world doesn't scroll until the player presses START
+  useEffect(() => {
+    document.documentElement.style.overflow = booted ? "" : "hidden";
+    if (!booted) window.scrollTo(0, 0);
+  }, [booted]);
 
   useEffect(() => {
     // a narrative site always boards at the beginning — also defeats
@@ -59,6 +67,7 @@ export default function Home() {
       <Panels />
       <SoundDirector />
       <Cursor />
+      <Boot />
       {/* scroll driver: the corridor journey */}
       <div ref={driver} className="h-[700vh]" />
       <Finale />

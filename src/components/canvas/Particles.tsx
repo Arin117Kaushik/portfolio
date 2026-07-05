@@ -19,6 +19,7 @@ const vertexShader = /* glsl */ `
   uniform vec2 uFocus;    // hovered finale row centre (NDC)
   uniform vec3 uFocusCol; // that row's hue
   uniform float uFocusStr;
+  uniform float uPulse;   // ignition flare — spikes at PRESS START, decays
   attribute vec4 aSeed;
   attribute float aCat;
   attribute vec4 aGrid; // xyz target, w = isGridParticle
@@ -62,7 +63,7 @@ const vertexShader = /* glsl */ `
     vec4 mv = modelViewMatrix * vec4(pos, 1.0);
     float dist = max(0.1, -mv.z);
     float size = (aSeed.w * 3.0 + 2.0) * (1.0 + chaosAmp * 1.1) * (150.0 / dist);
-    gl_PointSize = min(size, 18.0);
+    gl_PointSize = min(size * (1.0 + uPulse * 0.6), 22.0);
     vec4 clip = projectionMatrix * mv;
 
     // pointer repulsion in screen space — the swarm parts around the cursor
@@ -118,6 +119,9 @@ const vertexShader = /* glsl */ `
     // through the reading dim
     vColor = mix(vColor, uFocusCol, fw * 0.65);
     vAlpha *= 1.0 + fw * 1.6;
+
+    // ignition: the whole field flares as the save file loads in
+    vAlpha *= 1.0 + uPulse * (1.6 + aSeed.y * 1.2);
   }
 `;
 
@@ -140,8 +144,10 @@ const GRID_ROWS = 50;
 
 export default function Particles() {
   const quality = useUIStore((s) => s.quality);
+  const booted = useUIStore((s) => s.booted);
   const count = quality === "high" ? 30000 : 10000;
   const material = useRef<THREE.ShaderMaterial>(null);
+  const igniteAt = useRef(-1);
   const warpedTime = useRef(0);
   const pointerTarget = useRef(new THREE.Vector2(0, 0));
   const focusTarget = useRef(new THREE.Vector2(0, 0));
@@ -209,6 +215,13 @@ export default function Particles() {
     u.uFocusCol.value.lerp(focusColTarget.current, 0.07);
     u.uFocusStr.value +=
       (focusState.strength - u.uFocusStr.value) * (1 - Math.exp(-6 * dt));
+    // ignition flare: spike on PRESS START, exponential decay over ~2s
+    if (booted && igniteAt.current < 0)
+      igniteAt.current = state.clock.elapsedTime;
+    u.uPulse.value =
+      igniteAt.current < 0
+        ? 0
+        : Math.exp(-(state.clock.elapsedTime - igniteAt.current) * 1.8);
   });
 
   return (
@@ -232,6 +245,7 @@ export default function Particles() {
           uFocus: { value: new THREE.Vector2(0, 0) },
           uFocusCol: { value: new THREE.Vector3(0.44, 0.95, 0.87) },
           uFocusStr: { value: 0 },
+          uPulse: { value: 0 },
         }}
         transparent
         depthWrite={false}
