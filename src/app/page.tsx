@@ -28,7 +28,7 @@ const Experience = dynamic(() => import("@/components/canvas/Experience"), {
 });
 
 // worlds whose scroll journeys have shipped — scroll unlocks inside them
-const BUILT_WORLDS = ["frontier", "neon"];
+const BUILT_WORLDS = ["frontier", "neon", "depths", "voxel"];
 
 export default function Home() {
   const driver = useRef<HTMLDivElement>(null);

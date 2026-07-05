@@ -70,6 +70,53 @@ const JOURNEYS: Partial<Record<WorldId, JourneyConfig>> = {
       },
     ],
   },
+  depths: {
+    accent: "#5fd4c0",
+    body: "#dfe7ee",
+    hint: "❯ DESCEND",
+    clear: "WORLD 03 CLEAR",
+    beats: [
+      {
+        label: "ECHO 01 // FIRST LIGHT",
+        text: "no classroom down here. curiosity was the only torch.",
+        window: [0.1, 0.28],
+      },
+      {
+        label: "ECHO 02 // THE DESCENT",
+        text: "every bug a dark tunnel. every fix leaves a lantern.",
+        window: [0.38, 0.56],
+      },
+      {
+        label: "ECHO 03 // WHAT GLOWS",
+        text: "python, apps script, LLM agents — learned by breaking things.",
+        window: [0.62, 0.78],
+      },
+    ],
+  },
+  // the one bright world — dark ink captions, not white
+  voxel: {
+    accent: "#6b4a16",
+    body: "#2e2414",
+    hint: "❯ BUILD",
+    clear: "WORLD 04 CLEAR",
+    beats: [
+      {
+        label: "BLOCK 01 // FOUNDATION",
+        text: "one spreadsheet. then another. small blocks, stacked daily.",
+        window: [0.1, 0.28],
+      },
+      {
+        label: "BLOCK 02 // THE WORKSHOP",
+        text: "billing, MLS, dashboards — a farm of systems that run themselves.",
+        window: [0.38, 0.56],
+      },
+      {
+        label: "BLOCK 03 // THE HARVEST",
+        text: "3 hours a day handed back. the builder moves to new ground.",
+        window: [0.62, 0.78],
+      },
+    ],
+  },
 };
 
 function JourneyDom({ cfg }: { cfg: JourneyConfig }) {
