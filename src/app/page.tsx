@@ -8,7 +8,13 @@ import Finale from "@/components/dom/Finale";
 import SoundDirector from "@/components/dom/SoundDirector";
 import Cursor from "@/components/dom/Cursor";
 import Boot from "@/components/dom/Boot";
-import { scrollState, useUIStore } from "@/lib/store";
+import Worlds from "@/components/dom/Worlds";
+import { scrollState } from "@/lib/store";
+
+// Legacy pipeline-corridor journey — parked during the SAVE FILE rebuild.
+// Its components stay in the repo (and git history); worlds replace it
+// one at a time per the charter (R4+).
+const LEGACY_CORRIDOR = false;
 
 const Experience = dynamic(() => import("@/components/canvas/Experience"), {
   ssr: false,
@@ -23,13 +29,13 @@ const Experience = dynamic(() => import("@/components/canvas/Experience"), {
 
 export default function Home() {
   const driver = useRef<HTMLDivElement>(null);
-  const booted = useUIStore((s) => s.booted);
 
-  // the world doesn't scroll until the player presses START
+  // scroll stays locked at boot AND at the hub — it unlocks per-world
+  // once each world's scroll journey ships
   useEffect(() => {
-    document.documentElement.style.overflow = booted ? "" : "hidden";
-    if (!booted) window.scrollTo(0, 0);
-  }, [booted]);
+    document.documentElement.style.overflow = "hidden";
+    window.scrollTo(0, 0);
+  }, []);
 
   useEffect(() => {
     // a narrative site always boards at the beginning — also defeats
@@ -64,13 +70,18 @@ export default function Home() {
     <>
       <Experience />
       <HUD />
-      <Panels />
+      <Worlds />
       <SoundDirector />
       <Cursor />
       <Boot />
-      {/* scroll driver: the corridor journey */}
-      <div ref={driver} className="h-[700vh]" />
-      <Finale />
+      {LEGACY_CORRIDOR && (
+        <>
+          <Panels />
+          {/* scroll driver: the corridor journey */}
+          <div ref={driver} className="h-[700vh]" />
+          <Finale />
+        </>
+      )}
     </>
   );
 }

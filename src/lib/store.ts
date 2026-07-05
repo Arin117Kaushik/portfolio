@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { WorldId } from "./worlds";
 
 // Mutable scroll state kept outside React to avoid re-render storms.
 // `target` is set by the scroll listener; `current` is damped toward it
@@ -41,18 +42,23 @@ interface UIState {
   // SAVE FILE rebuild: nothing scrolls until the player presses START.
   // The boot gate is also the sound-unlock gesture.
   booted: boolean;
+  // "hub" = level select; a WorldId = inside that world
+  world: WorldId | "hub";
   setScene: (s: number) => void;
   setQuality: (q: "high" | "low") => void;
   setBooted: (b: boolean) => void;
+  setWorld: (w: WorldId | "hub") => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
   scene: 0,
   quality: "high",
   booted: false,
+  world: "hub",
   setScene: (scene) => set({ scene }),
   setQuality: (quality) => set({ quality }),
   setBooted: (booted) => set({ booted }),
+  setWorld: (world) => set({ world }),
 }));
 
 // Scene boundaries in scroll progress.

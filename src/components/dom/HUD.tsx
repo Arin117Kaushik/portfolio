@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { identity, sceneLabels } from "@/lib/content";
+import { identity } from "@/lib/content";
 import { audio } from "@/lib/audio";
 import { scrollState, useUIStore } from "@/lib/store";
+import { worldById } from "@/lib/worlds";
 
 // Fixed chrome around the experience. Terminal voice lives here.
 export default function HUD() {
-  const scene = useUIStore((s) => s.scene);
+  const world = useUIStore((s) => s.world);
   const bar = useRef<HTMLDivElement>(null);
   const hint = useRef<HTMLDivElement>(null);
   const [snd, setSnd] = useState(false);
@@ -44,14 +45,18 @@ export default function HUD() {
         <div className="mt-1 text-dim">{identity.tagline}</div>
       </div>
 
-      {/* top-right: scene label */}
+      {/* top-right: world chip */}
       <div className="absolute right-6 top-6 text-right">
-        <div className="text-signal/80">{sceneLabels[scene]}</div>
-        <div className="mt-1 text-dim/60">pipeline // live</div>
+        <div className="text-signal/80">
+          {world === "hub"
+            ? "WORLDS // 04"
+            : `WORLD ${worldById(world).index} // ${worldById(world).name}`}
+        </div>
+        <div className="mt-1 text-dim/60">save file // loaded</div>
       </div>
 
-      {/* bottom-left: scroll hint */}
-      <div ref={hint} className="absolute bottom-8 left-6 text-dim">
+      {/* bottom-left: hint (legacy corridor copy, hidden at the hub) */}
+      <div ref={hint} className="absolute bottom-8 left-6 hidden text-dim">
         {identity.hint}
       </div>
 

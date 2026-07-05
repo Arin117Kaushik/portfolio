@@ -6,6 +6,7 @@ import * as THREE from "three";
 import Particles from "./Particles";
 import Stations from "./Stations";
 import StationArt from "./StationArt";
+import Hub from "./Hub";
 import Effects from "./Effects";
 import {
   pointerState,
@@ -141,6 +142,7 @@ export default function Experience() {
         <Particles />
         <Stations />
         <StationArt />
+        <Hub />
         <Effects />
       </Canvas>
       {/* vignette as a DOM overlay — free, and immune to composer issues */}
