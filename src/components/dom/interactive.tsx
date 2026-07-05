@@ -69,6 +69,50 @@ export function Scramble({
   );
 }
 
+/** Fade-up reveal on viewport entry. One transition, no re-renders after. */
+export function Reveal({
+  children,
+  className,
+  delay = 0,
+}: {
+  children: ReactNode;
+  className?: string;
+  delay?: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        io.disconnect();
+        el.style.transitionDelay = `${delay}ms`;
+        el.style.opacity = "1";
+        el.style.transform = "translateY(0)";
+      },
+      { threshold: 0.15 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [delay]);
+
+  return (
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: 0,
+        transform: "translateY(18px)",
+        transition: "opacity 0.7s ease, transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1)",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 /** Number that counts up when visible. Handles "250+", "40%", "3 hrs → 0". */
 export function CountUp({
   value,

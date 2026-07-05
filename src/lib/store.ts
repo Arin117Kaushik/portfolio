@@ -18,6 +18,19 @@ export const scrollState = {
 // everywhere.
 export const pointerState = { x: 0, y: 0 };
 
+// DOM→shader focus link. Finale rows write a target here on hover (row
+// centre in NDC + that row's hue); Particles damps its uniforms toward
+// it every frame. The settled field gathers and re-tints around whatever
+// the cursor is reading — the content and the swarm are one organism.
+export const focusState = {
+  x: 0,
+  y: 0,
+  r: 0.44,
+  g: 0.95,
+  b: 0.87,
+  strength: 0,
+};
+
 if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
   (window as unknown as { __scroll: typeof scrollState }).__scroll = scrollState;
 }

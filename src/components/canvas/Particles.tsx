@@ -3,7 +3,7 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { pointerState, scrollState, useUIStore } from "@/lib/store";
+import { focusState, pointerState, scrollState, useUIStore } from "@/lib/store";
 
 // One shader carries the whole chaos→order journey. Order is spatial:
 // particles deeper in the corridor (-z) are progressively more ordered,
@@ -16,6 +16,9 @@ const vertexShader = /* glsl */ `
   uniform float uAmbient; // 0 corridor journey → 1 settled behind finale
   uniform float uProgress;
   uniform vec2 uPointer; // NDC
+  uniform vec2 uFocus;    // hovered finale row centre (NDC)
+  uniform vec3 uFocusCol; // that row's hue
+  uniform float uFocusStr;
   attribute vec4 aSeed;
   attribute float aCat;
   attribute vec4 aGrid; // xyz target, w = isGridParticle
@@ -72,6 +75,14 @@ const vertexShader = /* glsl */ `
     float push = (0.09 + 0.06 * uAmbient) * exp(-pd * pd * (22.0 - 9.0 * uAmbient));
     clip.xy += normalize(away + 0.0001) * push * clip.w;
 
+    // finale focus link: the settled field gathers toward the hovered
+    // content row. Pull is proportional to distance (zero at the target),
+    // so the swarm leans in without collapsing into a point.
+    vec2 toF = uFocus - pnd;
+    float fdist = length(toF * vec2(1.0, 0.6));
+    float fw = uFocusStr * uAmbient * exp(-fdist * fdist * 7.0);
+    clip.xy += toF * fw * 0.35 * clip.w;
+
     gl_Position = clip;
 
     // colour journey: noise-grey → signal cyan, category hues mid-corridor
@@ -102,6 +113,11 @@ const vertexShader = /* glsl */ `
     // alive at reading brightness, never dead
     float twinkle = 0.72 + 0.28 * sin(uRTime * (1.2 + aSeed.z * 2.4) + aSeed.w * 40.0);
     vAlpha *= mix(1.0, 0.45 * twinkle, uAmbient);
+
+    // focused particles take the hovered row's hue and glow back up
+    // through the reading dim
+    vColor = mix(vColor, uFocusCol, fw * 0.65);
+    vAlpha *= 1.0 + fw * 1.6;
   }
 `;
 
@@ -128,6 +144,8 @@ export default function Particles() {
   const material = useRef<THREE.ShaderMaterial>(null);
   const warpedTime = useRef(0);
   const pointerTarget = useRef(new THREE.Vector2(0, 0));
+  const focusTarget = useRef(new THREE.Vector2(0, 0));
+  const focusColTarget = useRef(new THREE.Vector3(0.44, 0.95, 0.87));
 
   const { positions, seeds, cats, grids } = useMemo(() => {
     const positions = new Float32Array(count * 3);
@@ -183,6 +201,14 @@ export default function Particles() {
     // eased so the swarm feels like it has mass
     pointerTarget.current.set(pointerState.x, pointerState.y);
     u.uPointer.value.lerp(pointerTarget.current, 0.08);
+    // DOM focus link — position/colour ease, strength damps exponentially
+    // so leaving a row releases the swarm instead of dropping it
+    focusTarget.current.set(focusState.x, focusState.y);
+    focusColTarget.current.set(focusState.r, focusState.g, focusState.b);
+    u.uFocus.value.lerp(focusTarget.current, 0.09);
+    u.uFocusCol.value.lerp(focusColTarget.current, 0.07);
+    u.uFocusStr.value +=
+      (focusState.strength - u.uFocusStr.value) * (1 - Math.exp(-6 * dt));
   });
 
   return (
@@ -203,6 +229,9 @@ export default function Particles() {
           uAmbient: { value: 0 },
           uProgress: { value: 0 },
           uPointer: { value: new THREE.Vector2(0, 0) },
+          uFocus: { value: new THREE.Vector2(0, 0) },
+          uFocusCol: { value: new THREE.Vector3(0.44, 0.95, 0.87) },
+          uFocusStr: { value: 0 },
         }}
         transparent
         depthWrite={false}
