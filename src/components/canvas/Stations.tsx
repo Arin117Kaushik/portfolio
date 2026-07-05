@@ -15,7 +15,10 @@ import * as THREE from "three";
 const FADE_FAR = 55;
 const FADE_NEAR = 22;
 
-function useProximityFade(ref: RefObject<THREE.Group | null>, stationZ: number) {
+export function useProximityFade(
+  ref: RefObject<THREE.Group | null>,
+  stationZ: number
+) {
   useFrame(({ camera }) => {
     const g = ref.current;
     if (!g) return;

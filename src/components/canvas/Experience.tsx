@@ -5,6 +5,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import Particles from "./Particles";
 import Stations from "./Stations";
+import StationArt from "./StationArt";
 import Effects from "./Effects";
 import {
   pointerState,
@@ -139,6 +140,7 @@ export default function Experience() {
         <Rig />
         <Particles />
         <Stations />
+        <StationArt />
         <Effects />
       </Canvas>
       {/* vignette as a DOM overlay — free, and immune to composer issues */}
