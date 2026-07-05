@@ -7,12 +7,17 @@ import Particles from "./Particles";
 import Stations from "./Stations";
 import StationArt from "./StationArt";
 import Hub from "./Hub";
+import Frontier from "./Frontier";
 import Effects from "./Effects";
+
+// legacy corridor set pieces — parked during the SAVE FILE rebuild
+const LEGACY_SET = false;
 import {
   pointerState,
   scrollState,
   sceneForProgress,
   useUIStore,
+  worldState,
 } from "@/lib/store";
 
 const CAM_START = 8;
@@ -45,13 +50,20 @@ const WEAVE = new THREE.CatmullRomCurve3(
 // camera steers into turns instead of panning flatly through them
 const DP_AHEAD = 12 / (CAM_START - CAM_END);
 
+const BG_BASE = new THREE.Color("#06070a");
+// diving into a world pushes the camera 10 units through the portal
+// plane; the world's journey then starts from that seat
+const DIVE_DEPTH = 10;
+
 function Rig() {
   const setScene = useUIStore((s) => s.setScene);
   const lastScene = useRef(0);
   const mouse = useRef({ x: 0, y: 0 });
   const weavePos = useRef(new THREE.Vector3());
   const weaveAhead = useRef(new THREE.Vector3());
-  const { camera } = useThree();
+  const bgColor = useRef(new THREE.Color("#06070a"));
+  const bgTarget = useRef(new THREE.Color());
+  const { camera, gl } = useThree();
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
@@ -75,9 +87,13 @@ function Rig() {
     const k = 1 - Math.exp(-4.5 * dt);
     scrollState.current += (scrollState.target - scrollState.current) * k;
     scrollState.ambient += (scrollState.post - scrollState.ambient) * k;
+    // world dive — slower constant for a ~1s cinematic push
+    worldState.t +=
+      (worldState.target - worldState.t) * (1 - Math.exp(-2.8 * dt));
+    const wt = worldState.t;
 
     const p = scrollState.current;
-    const z = CAM_START + (CAM_END - CAM_START) * p;
+    const z = CAM_START + (CAM_END - CAM_START) * p - DIVE_DEPTH * wt;
 
     const pc = THREE.MathUtils.clamp(p, 0, 1);
     const w = WEAVE.getPoint(pc, weavePos.current);
@@ -86,21 +102,37 @@ function Rig() {
       weaveAhead.current
     );
 
+    // the weave belongs to the corridor journeys — it straightens out
+    // during the dive so the camera flies clean through the portal
+    const straight = 1 - wt;
     camera.position.set(
-      w.x + mouse.current.x * 0.4,
-      w.y + mouse.current.y * -0.3,
+      w.x * straight + mouse.current.x * 0.4,
+      w.y * straight + mouse.current.y * -0.3,
       z
     );
     // look-at leads the position curve — softened so stations stay framed
     camera.lookAt(
-      wa.x * 0.6 + mouse.current.x * 0.2,
-      wa.y * 0.6 + mouse.current.y * -0.15,
+      wa.x * 0.6 * straight + mouse.current.x * 0.2,
+      wa.y * 0.6 * straight + mouse.current.y * -0.15,
       z - 12
     );
     // bank into lateral turns like a craft, not a tripod; lookAt has just
     // rebuilt the orientation, so a post-roll about the view axis is safe
-    const bank = THREE.MathUtils.clamp((wa.x - w.x) * -0.35, -0.045, 0.045);
+    const bank = THREE.MathUtils.clamp(
+      (wa.x - w.x) * -0.35 * straight,
+      -0.045,
+      0.045
+    );
     camera.rotateZ(bank);
+
+    // background sweeps toward a deep-dark version of the world palette
+    bgTarget.current.setRGB(
+      0.024 + worldState.r * 0.1 * wt,
+      0.027 + worldState.g * 0.07 * wt,
+      0.039 + worldState.b * 0.06 * wt
+    );
+    bgColor.current.lerp(wt > 0.001 ? bgTarget.current : BG_BASE, k * 0.8);
+    gl.setClearColor(bgColor.current);
 
     const scene = sceneForProgress(p);
     if (scene !== lastScene.current) {
@@ -114,6 +146,7 @@ function Rig() {
 
 export default function Experience() {
   const setQuality = useUIStore((s) => s.setQuality);
+  const world = useUIStore((s) => s.world);
 
   useEffect(() => {
     const isMobile =
@@ -140,9 +173,14 @@ export default function Experience() {
       >
         <Rig />
         <Particles />
-        <Stations />
-        <StationArt />
+        {LEGACY_SET && (
+          <>
+            <Stations />
+            <StationArt />
+          </>
+        )}
         <Hub />
+        {world === "frontier" && <Frontier />}
         <Effects />
       </Canvas>
       {/* vignette as a DOM overlay — free, and immune to composer issues */}

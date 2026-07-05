@@ -3,7 +3,13 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { focusState, pointerState, scrollState, useUIStore } from "@/lib/store";
+import {
+  focusState,
+  pointerState,
+  scrollState,
+  useUIStore,
+  worldState,
+} from "@/lib/store";
 
 // One shader carries the whole chaos→order journey. Order is spatial:
 // particles deeper in the corridor (-z) are progressively more ordered,
@@ -20,6 +26,8 @@ const vertexShader = /* glsl */ `
   uniform vec3 uFocusCol; // that row's hue
   uniform float uFocusStr;
   uniform float uPulse;   // ignition flare — spikes at PRESS START, decays
+  uniform vec3 uWorldCol; // active world palette
+  uniform float uWorld;   // 0 hub → 1 inside a world
   attribute vec4 aSeed;
   attribute float aCat;
   attribute vec4 aGrid; // xyz target, w = isGridParticle
@@ -122,6 +130,10 @@ const vertexShader = /* glsl */ `
 
     // ignition: the whole field flares as the save file loads in
     vAlpha *= 1.0 + uPulse * (1.6 + aSeed.y * 1.2);
+
+    // palette sweep: inside a world the field becomes that world's
+    // atmosphere — dust at dusk, neon rain, spores, pollen
+    vColor = mix(vColor, uWorldCol * (0.45 + 0.8 * aSeed.x), uWorld * 0.9);
   }
 `;
 
@@ -152,6 +164,7 @@ export default function Particles() {
   const pointerTarget = useRef(new THREE.Vector2(0, 0));
   const focusTarget = useRef(new THREE.Vector2(0, 0));
   const focusColTarget = useRef(new THREE.Vector3(0.44, 0.95, 0.87));
+  const worldColTarget = useRef(new THREE.Vector3(1, 1, 1));
 
   const { positions, seeds, cats, grids } = useMemo(() => {
     const positions = new Float32Array(count * 3);
@@ -222,6 +235,10 @@ export default function Particles() {
       igniteAt.current < 0
         ? 0
         : Math.exp(-(state.clock.elapsedTime - igniteAt.current) * 1.8);
+    // world palette sweep — t is already damped by the Rig
+    u.uWorld.value = worldState.t;
+    worldColTarget.current.set(worldState.r, worldState.g, worldState.b);
+    u.uWorldCol.value.lerp(worldColTarget.current, 0.05);
   });
 
   return (
@@ -246,6 +263,8 @@ export default function Particles() {
           uFocusCol: { value: new THREE.Vector3(0.44, 0.95, 0.87) },
           uFocusStr: { value: 0 },
           uPulse: { value: 0 },
+          uWorldCol: { value: new THREE.Vector3(1, 1, 1) },
+          uWorld: { value: 0 },
         }}
         transparent
         depthWrite={false}

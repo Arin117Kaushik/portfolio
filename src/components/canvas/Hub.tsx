@@ -4,7 +4,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { audio } from "@/lib/audio";
-import { pointerState, useUIStore } from "@/lib/store";
+import { pointerState, useUIStore, worldState } from "@/lib/store";
 import { WORLDS, WorldMeta } from "@/lib/worlds";
 
 // Level select — four world portals floating in the particle field
@@ -68,8 +68,9 @@ function Portal({ w, i }: { w: WorldMeta; i: number }) {
       hover.current * 0.1;
     m.rotation.y = -w.x * 0.028 + pointerState.x * 0.05;
     m.scale.setScalar(1 + hover.current * 0.07);
+    // portals dissolve as the camera dives through them into a world
     (m.material as THREE.MeshBasicMaterial).opacity =
-      0.82 + hover.current * 0.18;
+      (0.82 + hover.current * 0.18) * (1 - worldState.t);
   });
 
   return (
@@ -86,6 +87,7 @@ function Portal({ w, i }: { w: WorldMeta; i: number }) {
       }}
       onClick={(e) => {
         e.stopPropagation();
+        if (useUIStore.getState().world !== "hub") return; // mid-dive
         audio.tick();
         useUIStore.getState().setWorld(w.id);
       }}
@@ -99,12 +101,19 @@ function Portal({ w, i }: { w: WorldMeta; i: number }) {
 export default function Hub() {
   const booted = useUIStore((s) => s.booted);
   const world = useUIStore((s) => s.world);
+  const group = useRef<THREE.Group>(null);
 
-  // invisible groups are skipped by the raycaster, so portals can't be
-  // clicked before boot or from inside a world
+  // stay mounted through the dive so the dissolve reads; the raycaster
+  // skips the group once it goes invisible at the far end
+  useFrame(() => {
+    const g = group.current;
+    if (!g) return;
+    g.visible = booted && (world === "hub" || worldState.t < 0.95);
+  });
+
   return (
-    <group visible={booted && world === "hub"} position={[0, 0, 0]}>
-      {booted && world === "hub" && WORLDS.map((w, i) => <Portal key={w.id} w={w} i={i} />)}
+    <group ref={group} visible={false} position={[0, 0, 0]}>
+      {booted && WORLDS.map((w, i) => <Portal key={w.id} w={w} i={i} />)}
     </group>
   );
 }

@@ -10,6 +10,7 @@ export interface WorldMeta {
   name: string;
   tag: string; // one line, part of the ≤12-words budget
   color: string;
+  rgb: [number, number, number]; // normalized, for shader tinting
   x: number; // hub slot
 }
 
@@ -20,6 +21,7 @@ export const WORLDS: WorldMeta[] = [
     name: "FRONTIER",
     tag: "the grind era",
     color: "#c4622d",
+    rgb: [0.769, 0.384, 0.176],
     x: -4.8,
   },
   {
@@ -28,6 +30,7 @@ export const WORLDS: WorldMeta[] = [
     name: "NEON CITY",
     tag: "ai & automation",
     color: "#ff2d78",
+    rgb: [1.0, 0.176, 0.471],
     x: -1.6,
   },
   {
@@ -36,6 +39,7 @@ export const WORLDS: WorldMeta[] = [
     name: "HOLLOW DEPTHS",
     tag: "learning in the dark",
     color: "#5fd4c0",
+    rgb: [0.373, 0.831, 0.753],
     x: 1.6,
   },
   {
@@ -44,6 +48,7 @@ export const WORLDS: WorldMeta[] = [
     name: "VOXEL PLAINS",
     tag: "systems from blocks",
     color: "#7cb85c",
+    rgb: [0.486, 0.722, 0.361],
     x: 4.8,
   },
 ];

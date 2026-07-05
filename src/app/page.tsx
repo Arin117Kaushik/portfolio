@@ -9,7 +9,7 @@ import SoundDirector from "@/components/dom/SoundDirector";
 import Cursor from "@/components/dom/Cursor";
 import Boot from "@/components/dom/Boot";
 import Worlds from "@/components/dom/Worlds";
-import { scrollState } from "@/lib/store";
+import { scrollState, useUIStore } from "@/lib/store";
 
 // Legacy pipeline-corridor journey — parked during the SAVE FILE rebuild.
 // Its components stay in the repo (and git history); worlds replace it
@@ -27,15 +27,22 @@ const Experience = dynamic(() => import("@/components/canvas/Experience"), {
   ),
 });
 
+// worlds whose scroll journeys have shipped — scroll unlocks inside them
+const BUILT_WORLDS = ["frontier"];
+
 export default function Home() {
   const driver = useRef<HTMLDivElement>(null);
+  const world = useUIStore((s) => s.world);
+  const inJourney = BUILT_WORLDS.includes(world);
 
-  // scroll stays locked at boot AND at the hub — it unlocks per-world
-  // once each world's scroll journey ships
+  // scroll is a per-world resource: locked at boot and the hub, reset
+  // hard on every world change so each journey boards at its beginning
   useEffect(() => {
-    document.documentElement.style.overflow = "hidden";
+    document.documentElement.style.overflow = inJourney ? "" : "hidden";
     window.scrollTo(0, 0);
-  }, []);
+    scrollState.target = 0;
+    scrollState.current = 0;
+  }, [inJourney, world]);
 
   useEffect(() => {
     // a narrative site always boards at the beginning — also defeats
@@ -74,6 +81,8 @@ export default function Home() {
       <SoundDirector />
       <Cursor />
       <Boot />
+      {/* per-world scroll driver */}
+      {inJourney && <div ref={driver} className="h-[500vh]" />}
       {LEGACY_CORRIDOR && (
         <>
           <Panels />

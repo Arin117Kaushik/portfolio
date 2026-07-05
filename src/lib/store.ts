@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { WorldId } from "./worlds";
+import { worldById, type WorldId } from "./worlds";
 
 // Mutable scroll state kept outside React to avoid re-render storms.
 // `target` is set by the scroll listener; `current` is damped toward it
@@ -18,6 +18,18 @@ export const scrollState = {
 // die under the finale DOM, this doesn't. The swarm stays reactive
 // everywhere.
 export const pointerState = { x: 0, y: 0 };
+
+// World transition state, damped by the Rig (single writer for `t`).
+// t: 0 = at the hub, 1 = fully inside a world. The camera dives on it,
+// portals dissolve on it, and the particle field sweeps to the world's
+// palette (r/g/b) on it — one canvas, no cuts.
+export const worldState = {
+  t: 0,
+  target: 0,
+  r: 1,
+  g: 1,
+  b: 1,
+};
 
 // DOM→shader focus link. Finale rows write a target here on hover (row
 // centre in NDC + that row's hue); Particles damps its uniforms toward
@@ -58,7 +70,13 @@ export const useUIStore = create<UIState>((set) => ({
   setScene: (scene) => set({ scene }),
   setQuality: (quality) => set({ quality }),
   setBooted: (booted) => set({ booted }),
-  setWorld: (world) => set({ world }),
+  setWorld: (world) => {
+    set({ world });
+    worldState.target = world === "hub" ? 0 : 1;
+    if (world !== "hub") {
+      [worldState.r, worldState.g, worldState.b] = worldById(world).rgb;
+    }
+  },
 }));
 
 // Scene boundaries in scroll progress.
