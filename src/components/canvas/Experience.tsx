@@ -8,6 +8,7 @@ import Stations from "./Stations";
 import StationArt from "./StationArt";
 import Hub from "./Hub";
 import Frontier from "./Frontier";
+import NeonCity from "./NeonCity";
 import Effects from "./Effects";
 
 // legacy corridor set pieces — parked during the SAVE FILE rebuild
@@ -181,6 +182,7 @@ export default function Experience() {
         )}
         <Hub />
         {world === "frontier" && <Frontier />}
+        {world === "neon" && <NeonCity />}
         <Effects />
       </Canvas>
       {/* vignette as a DOM overlay — free, and immune to composer issues */}

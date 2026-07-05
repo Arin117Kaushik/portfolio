@@ -2,9 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import { scrollState, useUIStore, windowAlpha, worldState } from "@/lib/store";
-import { worldById } from "@/lib/worlds";
+import { worldById, type WorldId } from "@/lib/worlds";
 
-// DOM layer for the SAVE FILE structure. Hub whisper, built-world beat
+// DOM layer for the SAVE FILE structure. Hub whisper, per-world journey
 // captions (fixed slot, ≤12 words, swap in place), and under-construction
 // screens for worlds that haven't shipped. Story first — anyone who wants
 // the full text can ask the terminal or just contact Arin.
@@ -15,25 +15,64 @@ interface Beat {
   window: [number, number];
 }
 
-const FRONTIER_BEATS: Beat[] = [
-  {
-    label: "MEMORY 01 // THE LEDGER",
-    text: "250+ vehicle cases tracked weekly. by hand, until it wasn't.",
-    window: [0.1, 0.28],
-  },
-  {
-    label: "MEMORY 02 // THE RECKONING",
-    text: "six sheets reconciled by phone number — blockers flag themselves.",
-    window: [0.38, 0.56],
-  },
-  {
-    label: "MEMORY 03 // THE LESSON",
-    text: "3 hours of lookups became zero. the grind built the builder.",
-    window: [0.62, 0.78],
-  },
-];
+interface JourneyConfig {
+  accent: string; // labels, hint, clear chrome
+  body: string; // caption text color
+  hint: string;
+  clear: string;
+  beats: Beat[];
+}
 
-function FrontierDom() {
+const JOURNEYS: Partial<Record<WorldId, JourneyConfig>> = {
+  frontier: {
+    accent: "#e8894a",
+    body: "#f5e6d8",
+    hint: "❯ RIDE",
+    clear: "WORLD 01 CLEAR",
+    beats: [
+      {
+        label: "MEMORY 01 // THE LEDGER",
+        text: "250+ vehicle cases tracked weekly. by hand, until it wasn't.",
+        window: [0.1, 0.28],
+      },
+      {
+        label: "MEMORY 02 // THE RECKONING",
+        text: "six sheets reconciled by phone number — blockers flag themselves.",
+        window: [0.38, 0.56],
+      },
+      {
+        label: "MEMORY 03 // THE LESSON",
+        text: "3 hours of lookups became zero. the grind built the builder.",
+        window: [0.62, 0.78],
+      },
+    ],
+  },
+  neon: {
+    accent: "#6ff2dd",
+    body: "#eafbff",
+    hint: "❯ JACK IN",
+    clear: "WORLD 02 CLEAR",
+    beats: [
+      {
+        label: "SYSTEM 01 // VAHAN GATE",
+        text: "a bot solves government CAPTCHAs weekly — 250+ registrations, zero touch.",
+        window: [0.1, 0.28],
+      },
+      {
+        label: "SYSTEM 02 // CLASSIFIER",
+        text: "claude sorts 600+ rows of chaos into 80 clean categories.",
+        window: [0.38, 0.56],
+      },
+      {
+        label: "SYSTEM 03 // SIGNAL",
+        text: "500+ gmail threads scanned nightly. the team briefed by sunrise.",
+        window: [0.62, 0.78],
+      },
+    ],
+  },
+};
+
+function JourneyDom({ cfg }: { cfg: JourneyConfig }) {
   const setWorld = useUIStore((s) => s.setWorld);
   const hint = useRef<HTMLDivElement>(null);
   const beatRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -45,11 +84,9 @@ function FrontierDom() {
       const p = scrollState.current;
       const settled = worldState.t; // captions wait for the dive to land
       if (hint.current) {
-        hint.current.style.opacity = String(
-          Math.max(0, 1 - p * 16) * settled
-        );
+        hint.current.style.opacity = String(Math.max(0, 1 - p * 16) * settled);
       }
-      FRONTIER_BEATS.forEach((b, i) => {
+      cfg.beats.forEach((b, i) => {
         const el = beatRefs.current[i];
         if (!el) return;
         const a = windowAlpha(p, b.window[0], b.window[1]) * settled;
@@ -65,21 +102,20 @@ function FrontierDom() {
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [cfg]);
 
   return (
     <div className="pointer-events-none fixed inset-0 z-10 font-mono">
-      {/* ride hint */}
       <div
         ref={hint}
-        className="absolute bottom-10 left-1/2 -translate-x-1/2 text-xs tracking-[0.3em] text-[#e8894a]"
-        style={{ opacity: 0 }}
+        className="absolute bottom-10 left-1/2 -translate-x-1/2 text-xs tracking-[0.3em]"
+        style={{ opacity: 0, color: cfg.accent }}
       >
-        ❯ RIDE
+        {cfg.hint}
       </div>
 
       {/* fixed caption slot — one beat at a time */}
-      {FRONTIER_BEATS.map((b, i) => (
+      {cfg.beats.map((b, i) => (
         <div
           key={b.label}
           ref={(el) => {
@@ -88,10 +124,16 @@ function FrontierDom() {
           className="absolute bottom-16 left-6 max-w-md sm:left-16"
           style={{ opacity: 0 }}
         >
-          <div className="text-[10px] tracking-[0.3em] text-[#e8894a]">
+          <div
+            className="text-[10px] tracking-[0.3em]"
+            style={{ color: cfg.accent }}
+          >
             {b.label}
           </div>
-          <div className="mt-3 text-lg leading-relaxed text-[#f5e6d8] sm:text-xl">
+          <div
+            className="mt-3 text-lg leading-relaxed sm:text-xl"
+            style={{ color: cfg.body }}
+          >
             {b.text}
           </div>
         </div>
@@ -103,12 +145,16 @@ function FrontierDom() {
         className="absolute inset-0 flex flex-col items-center justify-center"
         style={{ opacity: 0 }}
       >
-        <div className="text-[10px] tracking-[0.4em] text-[#e8894a]">
-          WORLD 01 CLEAR
+        <div
+          className="text-[10px] tracking-[0.4em]"
+          style={{ color: cfg.accent }}
+        >
+          {cfg.clear}
         </div>
         <button
           onClick={() => setWorld("hub")}
-          className="mt-8 cursor-pointer border border-[#c4622d99] px-6 py-3 text-xs tracking-[0.2em] text-[#e8894a] transition-all hover:scale-105"
+          className="mt-8 cursor-pointer border px-6 py-3 text-xs tracking-[0.2em] transition-all hover:scale-105"
+          style={{ borderColor: `${cfg.accent}99`, color: cfg.accent }}
         >
           ← BACK TO WORLDS
         </button>
@@ -135,7 +181,8 @@ export default function Worlds() {
     );
   }
 
-  if (world === "frontier") return <FrontierDom />;
+  const journey = JOURNEYS[world];
+  if (journey) return <JourneyDom cfg={journey} />;
 
   const w = worldById(world);
   return (
