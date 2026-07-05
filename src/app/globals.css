@@ -92,3 +92,10 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .grain::before { animation: none; }
 }
+
+/* Custom cursor active: hide the native one everywhere (fine pointers
+   only — the class is added by Cursor.tsx after a pointer check) */
+html.custom-cursor,
+html.custom-cursor * {
+  cursor: none !important;
+}

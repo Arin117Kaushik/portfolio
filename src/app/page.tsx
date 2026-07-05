@@ -6,6 +6,7 @@ import HUD from "@/components/dom/HUD";
 import Panels from "@/components/dom/Panels";
 import Finale from "@/components/dom/Finale";
 import SoundDirector from "@/components/dom/SoundDirector";
+import Cursor from "@/components/dom/Cursor";
 import { scrollState } from "@/lib/store";
 
 const Experience = dynamic(() => import("@/components/canvas/Experience"), {
@@ -57,6 +58,7 @@ export default function Home() {
       <HUD />
       <Panels />
       <SoundDirector />
+      <Cursor />
       {/* scroll driver: the corridor journey */}
       <div ref={driver} className="h-[700vh]" />
       <Finale />

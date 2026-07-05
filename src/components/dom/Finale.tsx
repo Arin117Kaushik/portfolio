@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import {
   footerLine,
   identity,
@@ -11,6 +11,7 @@ import {
 } from "@/lib/content";
 import { focusState } from "@/lib/store";
 import { CountUp, Magnetic, Reveal, Scramble } from "./interactive";
+import Terminal from "./Terminal";
 
 // The Order scene — styled as the pipeline's OUTPUT, not a card dashboard:
 // full-width log rows, thin rules, mono annotations, big readout numbers.
@@ -56,9 +57,34 @@ function FocusRow({
 }
 
 export default function Finale() {
+  const skewRef = useRef<HTMLDivElement>(null);
+
+  // velocity skew: the artifact sheet shears slightly with scroll speed,
+  // damped back to rest — content feels like it has inertia, not a PDF
+  useEffect(() => {
+    let last = window.scrollY;
+    let lastT = performance.now();
+    let skew = 0;
+    let raf: number;
+    const loop = () => {
+      const now = performance.now();
+      const dt = Math.max(0.001, (now - lastT) / 1000);
+      const v = (window.scrollY - last) / dt;
+      last = window.scrollY;
+      lastT = now;
+      const target = Math.max(-2, Math.min(2, v * 0.0011));
+      skew += (target - skew) * (1 - Math.exp(-8 * dt));
+      if (skewRef.current)
+        skewRef.current.style.transform = `skewY(${skew.toFixed(3)}deg)`;
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   return (
     <section className="relative z-10 bg-gradient-to-b from-transparent via-[#06070ab3] to-[#06070ae0]">
-      <div className="mx-auto max-w-5xl px-6 pt-[38vh] pb-24">
+      <div ref={skewRef} className="mx-auto max-w-5xl px-6 pt-[38vh] pb-24">
         <div className="flex items-baseline justify-between">
           <div className="font-mono text-[10px] tracking-[0.3em] text-signal/80 uppercase">
             SCN 04 // order
@@ -185,40 +211,33 @@ export default function Finale() {
           </div>
         </Reveal>
 
-        {/* contact */}
+        {/* contact — the pipeline's shell */}
         <div className="mt-28 border-t border-white/10 pt-14">
           <p className="font-mono text-xs text-dim">
             {">"} open to data · automation · ai roles
           </p>
-          <div className="mt-6 flex flex-wrap gap-4">
-            <Magnetic>
-              <a
-                href={`mailto:${identity.email}`}
-                className="inline-block border border-signal bg-signal px-6 py-3 font-mono text-xs tracking-wider text-bg transition-opacity hover:opacity-85"
-              >
-                say hello
-              </a>
-            </Magnetic>
-            <Magnetic>
-              <a
-                href={identity.github}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-block border border-white/20 px-6 py-3 font-mono text-xs tracking-wider transition-colors hover:border-signal hover:text-signal"
-              >
-                github
-              </a>
-            </Magnetic>
-            <Magnetic>
-              <a
-                href={identity.linkedin}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-block border border-white/20 px-6 py-3 font-mono text-xs tracking-wider transition-colors hover:border-signal hover:text-signal"
-              >
-                linkedin
-              </a>
-            </Magnetic>
+          <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_auto]">
+            <Reveal>
+              <Terminal />
+            </Reveal>
+            <div className="flex flex-row flex-wrap gap-x-8 gap-y-4 lg:flex-col lg:pt-2">
+              {[
+                { label: "say hello", href: `mailto:${identity.email}` },
+                { label: "github", href: identity.github },
+                { label: "linkedin", href: identity.linkedin },
+              ].map((l) => (
+                <Magnetic key={l.label}>
+                  <a
+                    href={l.href}
+                    target={l.href.startsWith("http") ? "_blank" : undefined}
+                    rel="noreferrer"
+                    className="font-mono text-xs tracking-wider text-dim transition-colors hover:text-signal"
+                  >
+                    {">"} {l.label}
+                  </a>
+                </Magnetic>
+              ))}
+            </div>
           </div>
           <p className="mt-16 font-mono text-[10px] leading-relaxed text-dim/50">
             {footerLine}
